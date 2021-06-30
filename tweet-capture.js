@@ -28,7 +28,7 @@ const app = async (argv) => {
   await page.setViewport({
     width: 1280,
     height: 1920,
-    deviceScaleFactor: argv["scale-factor"],
+    deviceScaleFactor: argv["scale"],
   });
 
   if (argv.tweet) {
@@ -122,7 +122,7 @@ const captureTweet = async (page, url, path) => {
       description: "Use a dark colorscheme",
       type: "boolean",
     })
-    .option("scale-factor", {
+    .option("scale", {
       alias: "s",
       description: "Scale factor for the capture",
       type: "number",
