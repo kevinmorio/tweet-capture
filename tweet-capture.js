@@ -8,31 +8,7 @@ let urlToSlug = (url) => {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\//g, "-");
 };
 
-(async () => {
-  const argv = yargs(hideBin(process.argv))
-    .option("tweet", {
-      alias: "t",
-      description: "Capture single tweet only",
-      type: "boolean",
-    })
-    .option("dark", {
-      alias: "d",
-      description: "Use a dark colorscheme",
-      type: "boolean",
-    })
-    .option("scale-factor", {
-      alias: "s",
-      description: "Scale factor for the capture",
-      type: "number",
-      default: 2,
-    })
-    .positional("tweet-url", {
-      description: "The URL of the tweet or conversation",
-      type: "string",
-    })
-    .help()
-    .alias("help", "h").argv;
-
+const app = async (argv) => {
   const url = argv._[0];
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -55,10 +31,6 @@ let urlToSlug = (url) => {
     deviceScaleFactor: argv["scale-factor"],
   });
 
-  await page.goto(url, {
-    waitUntil: "networkidle0",
-  });
-
   if (argv.tweet) {
     await captureTweet(page, url, `${urlToSlug(url)}-tweet.png`);
   } else {
@@ -66,9 +38,13 @@ let urlToSlug = (url) => {
   }
 
   await browser.close();
-})();
+};
 
 const captureConversation = async (page, url, path) => {
+  await page.goto(url, {
+    waitUntil: "networkidle0",
+  });
+
   await page.evaluate(async () => {
     // Remove sign-in banner
     let banner = document.querySelector("#layers");
@@ -108,13 +84,17 @@ const captureConversation = async (page, url, path) => {
   });
 
   console.log(
-    chalk`Conversation {yellow ${url}} {bold (${
+    chalk`Conversation {yellow '${url}'} {bold (${
       tweets.length - 1
-    } tweets)} captured in {green ${path}}`
+    } tweets)} captured in {green '${path}'}`
   );
 };
 
 const captureTweet = async (page, url, path) => {
+  await page.goto(url, {
+    waitUntil: "networkidle0",
+  });
+
   await page.evaluate(() => {
     // Remove sign-in banner
     let banner = document.querySelector("#layers");
@@ -127,5 +107,33 @@ const captureTweet = async (page, url, path) => {
 
   await tweet.screenshot({ path: path });
 
-  console.log(chalk`Tweet {yellow ${url}} captured in {green ${path}}`);
+  console.log(chalk`Tweet {yellow '${url}'} captured in {green '${path}'}`);
 };
+
+(async () => {
+  const argv = yargs(hideBin(process.argv))
+    .option("tweet", {
+      alias: "t",
+      description: "Capture single tweet only",
+      type: "boolean",
+    })
+    .option("dark", {
+      alias: "d",
+      description: "Use a dark colorscheme",
+      type: "boolean",
+    })
+    .option("scale-factor", {
+      alias: "s",
+      description: "Scale factor for the capture",
+      type: "number",
+      default: 2,
+    })
+    .positional("tweet-url", {
+      description: "The URL of the tweet or conversation",
+      type: "string",
+    })
+    .help()
+    .alias("help", "h").argv;
+
+  app(argv);
+})();
