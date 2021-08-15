@@ -3,6 +3,7 @@ const puppeteer = require("puppeteer");
 const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
 const chalk = require("chalk");
+const { argv } = require("yargs");
 
 let urlToSlug = (url) => {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\//g, "-");
@@ -71,7 +72,17 @@ const captureConversation = async (page, url, path) => {
   const tweets = await page.$$(
     '[aria-label="Timeline: Conversation"] > div > div'
   );
-  const lastTweetBoundingBox = await tweets[tweets.length - 1].boundingBox();
+  let numTweets = tweets.length - 1;
+
+  if (argv["max-tweets"]) {
+    if (argv["max-tweets"] < numTweets) {
+      console.warn(
+        chalk`{yellow Only capturing ${argv["max-tweets"]} tweets from ${numTweets}}`
+      );
+    }
+    numTweets = Math.min(numTweets, argv["max-tweets"]);
+  }
+  const lastTweetBoundingBox = await tweets[numTweets].boundingBox();
 
   await primaryColumn.screenshot({
     path: path,
@@ -84,9 +95,7 @@ const captureConversation = async (page, url, path) => {
   });
 
   console.log(
-    chalk`Conversation {yellow '${url}'} {bold (${
-      tweets.length - 1
-    } tweets)} captured in {green '${path}'}`
+    chalk`Conversation {yellow '${url}'} {bold (${numTweets} tweets)} captured in {green '${path}'}`
   );
 };
 
@@ -127,6 +136,11 @@ const captureTweet = async (page, url, path) => {
       description: "Scale factor for the capture",
       type: "number",
       default: 2,
+    })
+    .option("max-tweets", {
+      alias: "m",
+      description: "Maximum number of tweets to capture",
+      type: "number",
     })
     .positional("tweet-url", {
       description: "The URL of the tweet or conversation",
